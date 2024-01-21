@@ -25,8 +25,9 @@ When scraping YouTube content, ethical considerations are paramount. Adhering to
 1. googleapiclient.discovery
 2. streamlit
 3. sqlalchemy
-4. pymongo
-5. pandas
+4. pymysql
+5. pymongo
+6. pandas
 
 ## Features
 

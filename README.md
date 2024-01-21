@@ -84,6 +84,17 @@ If you wish to contribute to the project, you are always welcome. If you encount
 
 This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
 
+## References
+
+- [Python Documentation](https://docs.python.org/)
+- [Streamlit Documentation](https://docs.streamlit.io/)
+- [YouTube API Documentation](https://developers.google.com/youtube/v3)
+- [MongoDB Documentation](https://www.mongodb.com/docs/)
+- [MySQL Documentation](https://dev.mysql.com/doc/)
+- [SQLAlchemy Documentation](https://docs.sqlalchemy.org/)
+- [PyMySQL Documentation](https://pymysql.readthedocs.io/)
+- [Pandas Documentation](https://pandas.pydata.org/docs/)
+  
 
 ## Contact
 

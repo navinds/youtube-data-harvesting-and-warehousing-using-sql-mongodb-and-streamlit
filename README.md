@@ -46,7 +46,7 @@ To run the YouTube Data Harvesting and Warehousing project, follow these steps:
 
 2. **Install Required Libraries:**
     ```
-    pip install streamlit pymongo sqlalchemy PyMySQL pandas google-api-python-client
+    pip install streamlit pymongo sqlalchemy PyMySQL pandas google-api-python-client dotenv
     ```
 
 3. **Set Up Google API:**

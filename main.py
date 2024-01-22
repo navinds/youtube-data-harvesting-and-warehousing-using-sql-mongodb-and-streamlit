@@ -1,8 +1,8 @@
-#============================================= Importing Required Libraries =============================================================================================#
+#============================================ Importing Required Libraries =============================================================================================#
 
 from googleapiclient.discovery import build
 import sqlalchemy as sa
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy import text
 import pymysql
 import pymongo
@@ -14,17 +14,26 @@ from googleapiclient.errors import HttpError
 from dotenv import load_dotenv
 import os
 
-
-#================================================  Loading Credentials ===========================================================#
+#===================================================== Credentials and Connections ===========================================================#
 
 load_dotenv()
-mysql_password = os.getenv("MYSQL_PASSWORD")
-api_key = os.getenv("API_KEY")
+mysql_password = os.getenv("MYSQL_PASSWORD") #MySQLpassword
+api_key = os.getenv("API_KEY") #Youtube_API_V3
 api_service_name = "youtube"
 api_version = "v3"
+mongo_atlas_user_name = os.getenv("MONGO_ATLAS_USER_NAME") #Mongo_Atlas_User_name
+mongo_atlas_password =  os.getenv("MONGO_ATLAS_PASSWORD")  #Mongo_Atlas_password
+
 # Building YouTube API Service
 youtube = build(api_service_name, api_version, developerKey=api_key)
 
+# Making connection between python and mongodb by passing a connection string in to a variable
+client = pymongo.MongoClient(f"mongodb+srv://{mongo_atlas_user_name}:{mongo_atlas_password}@cluster0.mkrsiyl.mongodb.net/?retryWrites=true&w=majority")
+mydb = client["yt_project_db"] #Creating Database
+yt_data_collection = mydb["yt_data_hub"] # Connecting to the MongoDB collection
+
+# Making connection between python and MySql by passing a connection string in to a variable
+engine = sa.create_engine( f"mysql+pymysql://root:{mysql_password}@127.0.0.1/yt_project_db")
 
 #================================================= Data Scraping Zone  ========================================================================#
 
@@ -62,7 +71,6 @@ def get_playlist_id(channel_ids):
         if i["Channel_ID"] == channel_ids:
             return i["Playlist_ID"] #It will return the playlist_id of the given channel
     return None  # Return None if the channel name is not found
-
 
 #----------------------------------------------------------------------------------------------------------------------#
 
@@ -192,11 +200,7 @@ def get_comment_data(video_ids):
                 break
     return comment_data
 
-
 #=============================================   Data Storing Zone   ====================================================================#
-
-# Making connection between python and mongodb by passing a connection string in to a variable
-client = pymongo.MongoClient("mongodb://localhost:27017/")
 
 def channel_data_to_mongodb(channel_ids):
     # Obtaining channel details, playlist ID, video IDs, video details, and comment data
@@ -206,9 +210,8 @@ def channel_data_to_mongodb(channel_ids):
     video_details = get_video_details(video_ids)
     comment_data = get_comment_data(video_ids)
 
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
+    
     mydb = client["yt_project_db"]
-
     # Connecting to the MongoDB collection
     yt_data_collection = mydb["yt_data_hub"]
 
@@ -221,17 +224,14 @@ def channel_data_to_mongodb(channel_ids):
 
 #----------------------------------------------------------------------------------------------------------------------#
    
-def sql_channel_details_table(mysql_password):
-    engine = sa.create_engine( f"mysql+pymysql://root:{mysql_password}@127.0.0.1/yt_project_db")
-
-    from sqlalchemy import create_engine, inspect
+def sql_channel_details_table(): # Creating SQL table for channel_details and Inserting values
 
     with engine.connect() as conn:
-        conn.execute(text("DROP TABLE IF EXISTS channel_details"))
+        conn.execute(text("DROP TABLE IF EXISTS channel_details")) # We are droping if table already exist to avoid duplicate data
 
     inspector = inspect(engine)
 
-    if not inspector.has_table('channel_details'):
+    if not inspector.has_table('channel_details'): # It will check channel details are already exist or not
         with engine.connect() as conn:
             conn.execute(text("""
                             CREATE TABLE channel_details (
@@ -247,9 +247,9 @@ def sql_channel_details_table(mysql_password):
     else:
         print("Table 'channel_details' already exists.")
 
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
-    mydb = client["yt_project_db"]
-    yt_data_collection = mydb["yt_data_hub"]
+    # Data Extraction from MongoDB
+    mydb = client["yt_project_db"] #DataBase Name
+    yt_data_collection = mydb["yt_data_hub"] # Collection
     channel_details = []
     for i in yt_data_collection.find({},{"_id":0,"channel_details":1}):
         channel_details.append(i["channel_details"][0])
@@ -258,24 +258,21 @@ def sql_channel_details_table(mysql_password):
 
     try:
         df = pd.DataFrame(channel_details)  # Create DataFrame from data
-        df.to_sql('channel_details', con=engine, if_exists='append', index=False)
+        df.to_sql('channel_details', con=engine, if_exists='append', index=False) #Inserting Channel Details to sql
         print("'channel_details' inserted successfully!")
     except Exception as e:
         print("Error inserting channel data:", e)
 
 #----------------------------------------------------------------------------------------------------------------------#
 
-def sql_video_details_table(mysql_password):
-    engine = sa.create_engine( f"mysql+pymysql://root:{mysql_password}@127.0.0.1/yt_project_db")
-
-    from sqlalchemy import create_engine, inspect
+def sql_video_details_table(): # Creating SQL table for video_details and Inserting values
 
     with engine.connect() as conn:
-        conn.execute(text("DROP TABLE IF EXISTS video_details"))
+        conn.execute(text("DROP TABLE IF EXISTS video_details")) # We are droping if table already exist to avoid duplicate data
 
     inspector = inspect(engine)
 
-    if not inspector.has_table('video_details'):
+    if not inspector.has_table('video_details'): # It will check video details are already exist or not
         with engine.connect() as conn:
             conn.execute(text("""
                             CREATE TABLE video_details (
@@ -296,10 +293,10 @@ def sql_video_details_table(mysql_password):
             print("Table 'video_details' created successfully!")
     else:
         print("Table 'video_details' already exists.")
-
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
-    mydb = client["yt_project_db"]
-    yt_data_collection = mydb["yt_data_hub"]
+    
+    # Data Extraction from MongoDB
+    mydb = client["yt_project_db"] #DataBase Name
+    yt_data_collection = mydb["yt_data_hub"] # Collection
     video_details = []
     for i in yt_data_collection.find({},{"_id":0,"video_details":1}):
         for j in range(len(i["video_details"])):
@@ -309,7 +306,7 @@ def sql_video_details_table(mysql_password):
 
     try:
         df = pd.DataFrame(video_details)  # Create DataFrame from data
-        df.to_sql('video_details', con=engine, if_exists='append', index=False,)
+        df.to_sql('video_details', con=engine, if_exists='append', index=False,) #Inserting Video Details to sql
 
         print("'video_details' inserted successfully!")
     except Exception as e:
@@ -317,17 +314,14 @@ def sql_video_details_table(mysql_password):
         
 #----------------------------------------------------------------------------------------------------------------------#
 
-def sql_comment_data_table(mysql_password):
-    engine = sa.create_engine( f"mysql+pymysql://root:{mysql_password}@127.0.0.1/yt_project_db")
-
-    from sqlalchemy import create_engine, inspect
+def sql_comment_data_table():
 
     with engine.connect() as conn:
-        conn.execute(text("DROP TABLE IF EXISTS comment_data"))
+        conn.execute(text("DROP TABLE IF EXISTS comment_data")) # We are droping if table already exist to avoid duplicate data
 
     inspector = inspect(engine)
 
-    if not inspector.has_table('comment_data'):
+    if not inspector.has_table('comment_data'): # It will check comment data are already exist or not
         with engine.connect() as conn:
             conn.execute(text("""
                             CREATE TABLE comment_data (
@@ -342,9 +336,9 @@ def sql_comment_data_table(mysql_password):
     else:
         print("Table 'channel_details' already exists.")
     
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
-    mydb = client["yt_project_db"]
-    yt_data_collection = mydb["yt_data_hub"]
+    
+    mydb = client["yt_project_db"] #DataBase Name
+    yt_data_collection = mydb["yt_data_hub"] # Collection
     comment_data = []
     for i in yt_data_collection.find({},{"_id":0,"comment_data":1}):
         for j in range(len(i["comment_data"])):
@@ -354,7 +348,7 @@ def sql_comment_data_table(mysql_password):
 
     try:
         df = pd.DataFrame(comment_data)  # Create DataFrame from data
-        df.to_sql('comment_data', con=engine, if_exists='append', index=False,)
+        df.to_sql('comment_data', con=engine, if_exists='append', index=False,) #Inserting comment data to sql
 
         print("'comment_data' inserted successfully!")
     except Exception as e:
@@ -362,19 +356,19 @@ def sql_comment_data_table(mysql_password):
 
 #----------------------------------------------------------------------------------------------------------------------#
 
-def sql_tables(mysql_password):
-    sql_channel_details_table(mysql_password)
-    sql_video_details_table(mysql_password)
-    sql_comment_data_table(mysql_password)
+# Combaining all the sql table creation and data inserting function in a single function
+def sql_tables():
+    sql_channel_details_table()
+    sql_video_details_table()
+    sql_comment_data_table()
 
     return " All Tables and Values Loaded Successfully to SQL Database"
 
-
 #=============================================  Streamlit Zone ==================================================================#
 
+# Below function is used to display the data which loaded to Mongodb using a Pandas Data Frame 
 
-def streamlit_channel_details():
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
+def streamlit_channel_details(): 
     mydb = client["yt_project_db"]
     yt_data_collection = mydb["yt_data_hub"]
     channel_details = []
@@ -389,7 +383,6 @@ def streamlit_channel_details():
 #----------------------------------------------------------------------------------------------------------------------#
 
 def streamlit_video_details():
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
     mydb = client["yt_project_db"]
     yt_data_collection = mydb["yt_data_hub"]
     video_details = []
@@ -404,7 +397,6 @@ def streamlit_video_details():
 #----------------------------------------------------------------------------------------------------------------------#
 
 def streamlit_comment_data():
-    client = pymongo.MongoClient("mongodb://localhost:27017/")
     mydb = client["yt_project_db"]
     yt_data_collection = mydb["yt_data_hub"]
     comment_data = []
@@ -419,9 +411,10 @@ def streamlit_comment_data():
 #----------------------------------------------------------------------------------------------------------------------#
 
 def streamlit_interface():
-    st.set_page_config(page_title="YouTube Data App", page_icon="📊")
+    st.set_page_config(page_title="Navin's YouTube Data App", page_icon="📊")
 
-    button_style = """
+    # Button Clicking Effect
+    button_style = """                         
         background-color: #3498db;
         color: white;
         padding: 10px 20px;
@@ -431,15 +424,14 @@ def streamlit_interface():
         cursor: pointer;
     """
 
-
     #..................................................Sidebar styling............................................................#
     
     with st.sidebar:
         st.markdown("""
-        <h1 style='text-align: center; color: #2c3e50; font-size: 2.5em; margin-bottom: 0.2em;'>
+        <h1 style='text-align: center; color: #2c3e50; font-size: 2.5em; margin-bottom: 0.2em;'> 
             YouTube Data Harvesting and Warehousing
         </h1>
-        <p style='text-align: center; font-size: 1.2em;'>🚀Youtube Data App!</p>
+        <p style='text-align: center; font-size: 1.2em;'>🚀Navin's Youtube Data App!</p>
         """, unsafe_allow_html=True)
 
         st.header("Technology Used :")
@@ -465,21 +457,22 @@ def streamlit_interface():
         linkedin_logo = "https://img.icons8.com/fluent/48/000000/linkedin.png"  
         linkedin_url = "https://www.linkedin.com/in/navinkumarsofficial/"  
         st.markdown(f"[![LinkedIn]({linkedin_logo})]({linkedin_url})")
+
+        # Email with logo
         email_logo = "https://img.icons8.com/fluent/48/000000/email.png"  
         your_email = "https://mail.google.com/mail/?view=cm&source=mailto&to=navinofficial1@gmail.com"
         st.markdown(f"[![Email]({email_logo})]({your_email})")
 
-
-    #.............................................. Main Page ............................................................#
+    #.............................................. Streamlit Main Page ............................................................#
         
-    st.title("Welcome to the YouTube Data App!")
+    st.title("Welcome to the YouTube Data App!") #Title
 
-    st.markdown("<h1 style='color: Grey;'># Get Data</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color: Grey;'># Get Data</h1>", unsafe_allow_html=True) 
 
     # Text input for channel ID 
-    st.subheader("Step 1: Enter the Channel ID")
-    st.text("Provide the YouTube Channel ID:")
-    channel_ids = st.text_input("Example: UC_x5XG1OV2P6uZZ5FSM9Ttw", max_chars=24, key="channel_id", help="Enter channel id and collect & store data")
+    st.subheader("Step 1: Enter the Youtube Channel ID ")
+    st.text("Please provide the Channel ID for scraping data into MongoDB:")
+    channel_ids = st.text_input("Example: UCttEB90eQV25-u_U-W2o8mQ", max_chars=24, key="channel_id", help="Enter channel id and collect & store data")
 
     if not channel_ids:
         st.warning("Please enter a valid Channel ID.")
@@ -521,7 +514,7 @@ def streamlit_interface():
         elif show_table == "Comments":
             streamlit_comment_data()
 
-
+    #Data Transfer to sql
     st.subheader("Step 2: Transfer Data to SQL")
 
     st.markdown('<p style="color: orange;">🔽 <strong>Click the button below to start the data transfer to SQL</strong></p>', unsafe_allow_html=True)
@@ -531,21 +524,18 @@ def streamlit_interface():
         # Create a spinner to show loading animation
         with st.spinner("Transferring data to SQL..."):
             # Simulate SQL migration
-            display = sql_tables(mysql_password)
+            display = sql_tables()
         
         # Display a success message after the spinner
         st.success("Data transfer to SQL completed successfully!")
         st.success(display)
 
-
-    engine = sa.create_engine( f"mysql+pymysql://root:{mysql_password}@127.0.0.1/yt_project_db")
-
     st.markdown("<h1 style='color: Grey;'># Analyze Data</h1>", unsafe_allow_html=True)
     st.markdown("<h3>Select a Query To Analyze</h3>", unsafe_allow_html=True)
 
-
-    #...............................................Sql Queries............................................................#
-
+    #...............................................Questions & Sql Queries............................................................#
+    
+    #Dropdown for selecting Questions
     question = st.selectbox(
         'Please Select Your Question',
         ("Select a Query","Videos and their channels: Showcase video titles along with their corresponding channels.",
@@ -561,9 +551,7 @@ def streamlit_interface():
 
 
 
-
-    engine = sa.create_engine( f"mysql+pymysql://root:{mysql_password}@127.0.0.1/yt_project_db")
-
+     # Displaying the output for selected questions 
 
     if st.button("Analyze Data"):
         st.write(f"Analyzing data for question: {question}")
@@ -626,7 +614,6 @@ def streamlit_interface():
 
 
 streamlit_interface()
-
 
 #======================================================== THE END  =======================================================================================#
 

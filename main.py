@@ -364,7 +364,7 @@ def sql_tables():
 
     return " All Tables and Values Loaded Successfully to SQL Database"
 
-#=============================================  Streamlit Zone ==================================================================#
+#================================================  Streamlit Zone ==================================================================#
 
 # Below function is used to display the data which loaded to Mongodb using a Pandas Data Frame 
 
@@ -408,8 +408,118 @@ def streamlit_comment_data():
 
     return df
 
-#----------------------------------------------------------------------------------------------------------------------#
+#---------------------------------------Streamlit Log In Page & Main Page-------------------------------------------------#
 
+# Creating a log in Page
+def login():
+
+    #styles
+    st.markdown("""
+    <style>
+    .title {
+        font-family: 'Arial Black', sans-serif;
+        font-size: 32px;
+        font-weight: bold;
+        color: #fff;
+        background: linear-gradient(45deg, #C0392B, #000000, #FACC2E);
+        padding: 15px;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        text-align: center;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="title">Navin's YT Data App</div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <style>
+    .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        background-color: #f5f5f5;
+    }
+
+    .form-container {
+        background-color: #fff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .title {
+        text-align: center;
+        font-size: 30px;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    .input-field {
+        margin-bottom: 15px;
+    }
+
+    .input-field label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .input-field input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+
+    .button {
+        background-color: #4CAF50;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .error-message {
+        color: red;
+        text-align: center;
+        margin-top: 10px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+
+    st.container()
+
+    with st.form("login_form"):
+        st.markdown("<h1 style='font-size: 20px;'>Log in to YT Data App </h1>", unsafe_allow_html=True)
+
+        username = st.text_input("Username", key="username")
+        password = st.text_input("Password", type="password", key="password")
+
+        if st.form_submit_button("Login"):
+            # Check credentials (replace with your authentication logic)
+            if username == "navin" and password == "#ydh&w":
+                st.session_state.logged_in = True
+                st.success("Login successful!")
+                st.experimental_rerun()  # Redirect to the main app
+            else:
+                st.error("Invalid credentials")
+
+# Creating Log out 
+def logout():
+    st.markdown("<h1 style='font-size: 20px;'>Log Out </h1>", unsafe_allow_html=True)
+
+    if st.button("Logout"):
+        st.session_state.logged_in = False
+        st.success("Logout successful!")
+        st.experimental_rerun()
+#.............................................. Streamlit Main Page ............................................................#
 def streamlit_interface():
     st.set_page_config(page_title="Navin's YouTube Data App", page_icon="📊")
 
@@ -428,7 +538,7 @@ def streamlit_interface():
     
     with st.sidebar:
         st.markdown("""
-        <h1 style='text-align: center; color: #2c3e50; font-size: 2.5em; margin-bottom: 0.2em;'> 
+        <h1 style='text-align: center; color: #FF3131; font-size: 2.5em; margin-bottom: 0.2em;'> 
             YouTube Data Harvesting and Warehousing
         </h1>
         <p style='text-align: center; font-size: 1.2em;'>🚀Navin's Youtube Data App!</p>
@@ -463,9 +573,9 @@ def streamlit_interface():
         your_email = "https://mail.google.com/mail/?view=cm&source=mailto&to=navinofficial1@gmail.com"
         st.markdown(f"[![Email]({email_logo})]({your_email})")
 
-    #.............................................. Streamlit Main Page ............................................................#
+    #................................................. Core Page ............................................................#
         
-    st.title("Welcome to the YouTube Data App!") #Title
+    st.title("Welcome to the Navin's YouTube Data App!") #Title
 
     st.markdown("<h1 style='color: Grey;'># Get Data</h1>", unsafe_allow_html=True) 
 
@@ -611,10 +721,17 @@ def streamlit_interface():
                                             on a.video_id = b.video_id group by a.video_id,b.channel_name 
                                             order by count(a.comment_text) desc ;''',engine)
             st.write(query_10)
+    
+    logout()
 
-
-streamlit_interface()
-
+if __name__ == "__main__":
+    if not hasattr(st.session_state, 'logged_in') or not st.session_state.logged_in:
+        # If not logged in, display the login page
+        login()
+    else:
+        # If logged in, display the main interface and logout button
+        streamlit_interface()
+        
 #======================================================== THE END  =======================================================================================#
 
 

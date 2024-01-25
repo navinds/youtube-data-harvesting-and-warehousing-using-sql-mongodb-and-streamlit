@@ -65,7 +65,7 @@ def get_channel_details(channel_ids):
 
 #----------------------------------------------------------------------------------------------------------------------#
 
-#Function to get channel Ids
+#Function to get playlist ids
 def get_playlist_id(channel_ids):
     for i in get_channel_details(channel_ids) : #reusing our previous "get_channel_data" function 
         if i["Channel_ID"] == channel_ids:
@@ -74,7 +74,7 @@ def get_playlist_id(channel_ids):
 
 #----------------------------------------------------------------------------------------------------------------------#
 
-#Function to get playlist ids
+#Function to get video ids
 def get_video_ids(channel_ids):
 
     playlist_id = get_playlist_id(channel_ids) # reusing our "get_playlist_Id" function
@@ -118,7 +118,7 @@ def get_video_ids(channel_ids):
     return video_ids
 
 #----------------------------------------------------------------------------------------------------------------------#
-
+# Function to get video details
 def get_video_details(video_ids):
 
     all_video_details = [] # List to store details for each provided video ID
@@ -585,9 +585,16 @@ def streamlit_interface():
     channel_ids = st.text_input("Example: UCttEB90eQV25-u_U-W2o8mQ", max_chars=24, key="channel_id", help="Enter channel id and collect & store data")
 
     if not channel_ids:
+        st.subheader("If you don't know the channel id  :red[click below] ⬇")
+        st.link_button("Find Channel ID", "https://www.tunepocket.com/youtube-channel-id-finder/")
+        st.stop()
+
+    elif len(channel_ids) < 24:
         st.warning("Please enter a valid Channel ID.")
         st.stop()
-    st.success(f"You entered: {channel_ids}")
+
+    else:
+        st.success(f"You entered: {channel_ids}")
 
     if st.button("Scrape and Store Data", key="unique_button", help="Click to initiate data scraping and storage", on_click=lambda: st.balloons()):
         with st.spinner("Collecting and storing data..."):
@@ -627,7 +634,7 @@ def streamlit_interface():
     #Data Transfer to sql
     st.subheader("Step 2: Transfer Data to SQL")
 
-    st.markdown('<p style="color: orange;">🔽 <strong>Click the button below to start the data transfer to SQL</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: red;">🔽 <strong>Click the button below to start the data transfer to SQL</strong></p>', unsafe_allow_html=True)
 
 
     if st.button("Transfer to SQL",on_click=lambda: st.balloons()):
@@ -733,10 +740,4 @@ if __name__ == "__main__":
         streamlit_interface()
         
 #======================================================== THE END  =======================================================================================#
-
-
-
-
-
-
 

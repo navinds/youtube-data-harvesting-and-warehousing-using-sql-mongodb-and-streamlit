@@ -74,7 +74,7 @@ def get_playlist_id(channel_ids):
 
 #----------------------------------------------------------------------------------------------------------------------#
 
-#Function to get video ids
+#Function to get playlist ids
 def get_video_ids(channel_ids):
 
     playlist_id = get_playlist_id(channel_ids) # reusing our "get_playlist_Id" function

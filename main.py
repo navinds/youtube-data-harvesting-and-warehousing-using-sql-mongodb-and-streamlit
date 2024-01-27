@@ -223,6 +223,27 @@ def channel_data_to_mongodb(channel_ids):
     return("Uploaded Successfully to MongoDB!")
 
 #----------------------------------------------------------------------------------------------------------------------#
+
+def update_channel_data_to_mongodb(channel_ids):
+
+    mydb = client["yt_project_db"]
+    yt_data_collection = mydb["yt_data_hub"]
+
+    # Collect the latest data for the channel
+    channel_details = get_channel_details(channel_ids)
+    video_ids = get_video_ids(channel_ids)
+    video_details = get_video_details(video_ids)
+    comment_data = get_comment_data(video_ids)
+
+    # Update the document in MongoDB
+    result = yt_data_collection.update_one({"channel_details.Channel_ID": channel_ids},
+                                          {"$set": {"channel_details": channel_details,
+                                                    "video_details": video_details,
+                                                    "comment_data": comment_data}})
+
+    return "Channel data updated successfully!" if result.modified_count > 0 else "Channel data not found or no updates were made."
+
+#----------------------------------------------------------------------------------------------------------------------#
    
 def sql_channel_details_table(): # Creating SQL table for channel_details and Inserting values
 
@@ -610,7 +631,9 @@ def streamlit_interface():
 
             # Check if the provided Channel ID already exists
             if channel_ids in channel_ids_list:
-                st.warning(f"Channel details for {channel_ids} already exist.")
+                st.info(f"Channel details for {channel_ids} already exist. Updating data...")
+                output = update_channel_data_to_mongodb(channel_ids)  # Call the update function
+                st.success(output)
             else:
                 # Call your function to collect and store data
                 output = channel_data_to_mongodb(channel_ids)
